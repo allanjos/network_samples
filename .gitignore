@@ -1,2 +1,3 @@
+build/
 *.o
 capture/pcap-capture
