@@ -4,5 +4,6 @@
 
 ## WIP
 - Packet capture
+- Sockets
 
 ## DONE
