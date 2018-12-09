@@ -10,34 +10,45 @@
 #include <arpa/inet.h>
 #include <signal.h>
 
-#define TM_BUF_SIZE 1400
+#include "network.h"
 
 int socket_client;
 char *server_address;
 int server_port;
-char socket_buffer[TM_BUF_SIZE];
+char socket_buffer[SOCKET_BUFFER_SIZE];
 char *message;
 
-int udpClient()
+void app_term()
 {
-    struct sockaddr_in destAddr;
+    fprintf(stderr, "Terminating.\n");
+
+    if (socket_client != -1) {
+        close(socket_client);
+    }
+}
+
+int udp_client_start()
+{
+    struct sockaddr_in server_socket_addr;
 
     printf("Server address: %s\n", server_address);
     printf("Server port: %d\n", server_port);
  
     // address family
-    destAddr.sin_family = AF_INET;
+    server_socket_addr.sin_family = AF_INET;
     // destination port
-    destAddr.sin_port = htons(server_port);
+    server_socket_addr.sin_port = htons(server_port);
     // destination IP address
-    destAddr.sin_addr.s_addr = inet_addr(server_address);
+    server_socket_addr.sin_addr.s_addr = inet_addr(server_address);
  
     socket_client = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
  
     if (socket_client < 0) {
        fprintf(stderr, "Error on socket creation.\n");
 
-       goto udpClientEnd;
+       app_term();
+
+       return 1;
     }
 
     printf("Socket created.\n");
@@ -49,23 +60,21 @@ int udpClient()
     strcpy(socket_buffer, message);
 
     rv = sendto(socket_client,
-                        socket_buffer,
-                        TM_BUF_SIZE,
-                        0,
-                        (const struct sockaddr *) &destAddr,
-                        sizeof(destAddr));
+                socket_buffer,
+                SOCKET_BUFFER_SIZE,
+                0,
+                (const struct sockaddr *) &server_socket_addr,
+                sizeof(server_socket_addr));
 
     if (rv < 0) {
         fprintf(stderr, "Error on trying to send packet.\n");
+
+        app_term();
+
+        return 1;
     }
 
-    udpClientEnd:
-
-    printf("Terminating.\n");
-
-    if (socket_client != -1) {
-        close(socket_client);
-    }
+    app_term();
  
     return 0;
 }
@@ -74,9 +83,7 @@ void sigint_handler(int sig)
 {
     printf("sigint_handler: signal %d\n", sig);
 
-    if (socket_client != -1) {
-        close(socket_client);
-    }
+    app_term();
 }
 
 int main(int argc, char *argv[])
@@ -95,7 +102,7 @@ int main(int argc, char *argv[])
 
     signal(SIGINT, sigint_handler);
 
-    udpClient();
+    udp_client_start();
 
     return 0;
 }

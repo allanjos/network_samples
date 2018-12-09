@@ -8,9 +8,9 @@
 #include <netinet/in.h>
 #include <signal.h>
 
-#define TM_BUF_SIZE 1500
+#include "network.h"
 
-char socket_buffer[TM_BUF_SIZE];
+char socket_buffer[SOCKET_BUFFER_SIZE];
 int socket_server;
 int stop_requested = 0;
 int server_port;
@@ -40,7 +40,9 @@ int udp_server_start(void)
     if (socket_server < 0) {
         printf("Error on socket creation.\n");
 
-        goto udpServerEnd;
+        app_term();
+
+        return 1;
     }
 
     rv = bind(socket_server, (const struct sockaddr *) &server_sock_address, sizeof(server_sock_address));
@@ -48,7 +50,9 @@ int udp_server_start(void)
     if (rv < 0) {
         fprintf(stderr, "Error on trying to bind the port and address.\n");
 
-        goto udpServerEnd;
+        app_term();
+
+        return 1;
     }
 
     while (!stop_requested) {
@@ -58,7 +62,7 @@ int udp_server_start(void)
 
         rv = recvfrom(socket_server,
                              socket_buffer,
-                             TM_BUF_SIZE,
+                             SOCKET_BUFFER_SIZE,
                              0,
                              (struct sockaddr *) &source_sock_address,
                              &address_length);
@@ -70,8 +74,6 @@ int udp_server_start(void)
 
         printf("Received data: %s\n", socket_buffer);
     }
-
-    udpServerEnd:
 
     app_term();
 

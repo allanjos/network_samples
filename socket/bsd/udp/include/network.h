@@ -3,6 +3,8 @@
 
 #include <errno.h>
 
+#define SOCKET_BUFFER_SIZE 4096
+
 const char *get_socket_error_message(int error_code) {
     switch (error_code) {
         case EWOULDBLOCK:
