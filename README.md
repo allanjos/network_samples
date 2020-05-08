@@ -1,9 +1,11 @@
 # Network samples
 
-## TODO
-
 ## WIP
+
 - Packet capture
 - Sockets
+- MQTT
 
-## DONE
+## TODO
+
+- Add security layer to communication.
