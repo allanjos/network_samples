@@ -11,7 +11,7 @@
 #include "server.h"
 
 #define BACKLOG 4
-#define SERVER_PORT 5555
+#define SERVER_PORT 5556
 
 int socket_fd = 0;
 int client_connection = 0;
@@ -20,18 +20,12 @@ struct sockaddr_in addr_in;
 time_t time_current;
 struct tm *gmtime_current = NULL;
 FILE *socket_file_fd = NULL;
-char buffer_client_msg[1024] = {'\0'};
+char buffer_client_msg[10 * 1024] = {'\0'};
 
 void app_term()
 {
-    if (socket_file_fd != NULL) {
-        fclose(socket_file_fd);
-
-        socket_file_fd = NULL;
-    }
-
     if (client_connection) {
-        printf("Closing client_connection..\n");
+        printf("Closing connection with the client..\n");
 
         close(client_connection);
 
@@ -39,7 +33,7 @@ void app_term()
     }
 
     if (socket_fd) {
-        printf("Closing socket_file_fd client_connection..\n");
+        printf("Closing socket..\n");
 
         close(socket_fd);
 
@@ -96,12 +90,12 @@ int server_start()
 
         printf("Client is connected.\n");
 
-        // Read message from the socket_file_fd
+        // Read message from the socket
 
         rv = recv(client_connection, buffer_client_msg, sizeof(buffer_client_msg), 0);
 
         if (rv < 0) {
-            fprintf(stderr, "Invalid socket_file_fd message.\n");
+            fprintf(stderr, "Invalid socket message.\n");
 
             perror("Error message:");
 
@@ -110,27 +104,24 @@ int server_start()
             break;
         }
         else if (rv == 0) {
-            fprintf(stderr, "No bytes received from socket_file_fd.\n");
+            fprintf(stderr, "No bytes received from client.\n");
 
             break;
         }
         else {
-            printf("Client message: %s\n", buffer_client_msg);
+            printf("Message received from client: %s\n", buffer_client_msg);
         }
 
-        // Send message to socket_file_fd
+        // Send message to client
 
-        printf("Send response to the socket_file_fd...\n");
+        printf("Send response to the client...\n");
 
-        if ((socket_file_fd = fdopen(client_connection, "w")) == NULL) {
-            fprintf(stderr, "Error while trying to open the client_connection descriptor.\n");
+        time_current = time(NULL);
 
-            app_term();
+        printf("UTC:   %s", asctime(gmtime(&time_current)));
+        printf("local: %s", asctime(localtime(&time_current)));
 
-            return 5;
-        }
-
-        if ((time_current = time(NULL)) < 0) {
+        if (time_current < 0) {
             fprintf(stderr, "Invalid current time.\n");
 
             perror("Error on trying to get the current time.\n");
@@ -142,7 +133,7 @@ int server_start()
 
         gmtime_current = gmtime(&time_current);
 
-        fprintf(socket_file_fd,
+        sprintf(buffer_client_msg,
                 "%.4i-%.2i-%.2iT%.2i:%.2i:%.2iZ\n",
                 gmtime_current->tm_year + 1900,
                 gmtime_current->tm_mon + 1,
@@ -151,9 +142,9 @@ int server_start()
                 gmtime_current->tm_min,
                 gmtime_current->tm_sec);
 
-        fclose(socket_file_fd);
+        printf("Message to send to client: %s\n", buffer_client_msg);
 
-        socket_file_fd = NULL;
+        send(client_connection, buffer_client_msg, strlen(buffer_client_msg), 0);
     }
 
     app_term();

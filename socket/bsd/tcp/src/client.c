@@ -13,7 +13,7 @@
 #include "client.h"
 
 #define SERVER_ADDRESS "127.0.0.1"
-#define SERVER_PORT 5555
+#define SERVER_PORT 5556
 #define SOCKET_BUFFER_SIZE 1024
 
 char socket_buffer[SOCKET_BUFFER_SIZE];
@@ -58,7 +58,29 @@ int tcp_client_start(void)
 
     // Send message to the server
 
-    sprintf(socket_buffer, "Packet test\n");
+    time_t time_current;
+    struct tm *gmtime_current = NULL;
+
+    if ((time_current = time(NULL)) < 0) {
+        fprintf(stderr, "Invalid current time.\n");
+
+        perror("Error on trying to get the current time.\n");
+
+        app_term();
+
+        return 6;
+    }
+
+    gmtime_current = gmtime(&time_current);
+
+    sprintf(socket_buffer,
+            "Message from client %.4i-%.2i-%.2iT%.2i:%.2i:%.2iZ\n",
+            gmtime_current->tm_year + 1900,
+            gmtime_current->tm_mon + 1,
+            gmtime_current->tm_mday,
+            gmtime_current->tm_hour,
+            gmtime_current->tm_min,
+            gmtime_current->tm_sec);
 
     printf("String to send (%ld bytes): %s\n", strlen(socket_buffer), socket_buffer);
 
@@ -76,17 +98,17 @@ int tcp_client_start(void)
     rv = recv(socket_client, socket_buffer, sizeof(socket_buffer), 0);
 
     if (rv < 0) {
-        fprintf(stderr, "Invalid client message.\n");
+        fprintf(stderr, "Invalid server message.\n");
 
         perror("Error message:");
 
         fprintf(stderr, "Internal error: %s\n", get_socket_error_message(rv));
     }
     else if (rv == 0) {
-        fprintf(stderr, "No bytes received from client.\n");
+        fprintf(stderr, "No bytes received from server.\n");
     }
     else {
-        printf("Client message: %s\n", socket_buffer);
+        printf("Message received from server: %s\n", socket_buffer);
     }
 
     app_term();
